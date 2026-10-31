@@ -24,8 +24,10 @@ async function predictRisk(hour) {
   }
 
   try {
+    const mlApiUrl = process.env.ML_API_URL || 'http://127.0.0.1:5001';
+
     const response = await axios.post(
-      'http://127.0.0.1:5001/predict',
+      `${mlApiUrl}/predict`,
       {
         Temperature: hour.temperature,
         Humidity: hour.humidity,
