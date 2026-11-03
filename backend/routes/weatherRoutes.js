@@ -7,15 +7,7 @@ const LOCATIONS = require('../config/locations');
 const { fetchCurrentWeather } = require('../services/weatherService');
 
 async function predictRisk(hour) {
-  if (
-    !hour ||
-    hour.temperature == null ||
-    hour.humidity == null ||
-    hour.windSpeed == null ||
-    hour.uvIndex == null ||
-    hour.visibility == null ||
-    hour.weatherType == null
-  ) {
+  if (!hour || hour.temperature == null || hour.humidity == null) {
     return {
       mlRiskScore: null,
       mlRiskLabel: null,
@@ -31,10 +23,6 @@ async function predictRisk(hour) {
       {
         Temperature: hour.temperature,
         Humidity: hour.humidity,
-        'Wind Speed': hour.windSpeed,
-        'UV Index': hour.uvIndex,
-        'Visibility (km)': hour.visibility,
-        'Weather Type': hour.weatherType,
       },
       { timeout: 5000 }
     );

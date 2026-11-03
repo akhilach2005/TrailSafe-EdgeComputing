@@ -1,8 +1,8 @@
-
 from pathlib import Path
 import joblib
-import pandas as pd
 import math
+import os
+import pandas as pd
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -20,15 +20,7 @@ def predict():
     if not isinstance(data, dict):
         return jsonify({"error": "JSON request body is required"}), 400
 
-    required = [
-        "Temperature",
-        "Humidity",
-        "Wind Speed",
-        "UV Index",
-        "Visibility (km)",
-        "Weather Type"
-    ]
-
+    required = ["Temperature", "Humidity"]
     missing = [key for key in required if key not in data]
 
     if missing:
@@ -38,33 +30,21 @@ def predict():
         }), 400
 
     try:
-        row = pd.DataFrame([{
-            "Temperature": float(data["Temperature"]),
-            "Humidity": float(data["Humidity"]),
-            "Wind Speed": float(data["Wind Speed"]),
-            "UV Index": float(data["UV Index"]),
-            "Visibility (km)": float(data["Visibility (km)"]),
-            "Weather Type": str(data["Weather Type"]).strip().title()
-        }])
+        temperature = float(data["Temperature"])
+        humidity = float(data["Humidity"])
 
-        numeric_columns = required[:-1]
-
-        if not all(math.isfinite(row[col].iloc[0]) for col in numeric_columns):
+        if not math.isfinite(temperature) or not math.isfinite(humidity):
             return jsonify({"error": "Numeric fields must be finite numbers"}), 400
 
-        if not 0 <= row["Humidity"].iloc[0] <= 100:
+        if not 0 <= humidity <= 100:
             return jsonify({"error": "Humidity must be between 0 and 100"}), 400
 
-        if row["Wind Speed"].iloc[0] < 0 or row["UV Index"].iloc[0] < 0 or row["Visibility (km)"].iloc[0] < 0:
-            return jsonify({"error": "Wind speed, UV index and visibility cannot be negative"}), 400
+        row = pd.DataFrame([{
+            "Temperature": temperature,
+            "Humidity": humidity
+        }]).reindex(columns=model_features)
 
-        if row["Weather Type"].iloc[0] not in ["Sunny", "Cloudy", "Rainy", "Snowy"]:
-            return jsonify({"error": "Invalid weather type"}), 400
-
-        encoded = pd.get_dummies(row, columns=["Weather Type"])
-        encoded = encoded.reindex(columns=model_features, fill_value=0)
-
-        prediction = float(model.predict(encoded)[0])
+        prediction = float(model.predict(row)[0])
         risk_score = round(max(0, min(100, prediction)), 2)
 
         if risk_score < 25:
@@ -84,7 +64,9 @@ def predict():
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid input values"}), 400
 
-import os
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)), debug=False)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5001)),
+        debug=False
+    )
